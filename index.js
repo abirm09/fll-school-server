@@ -31,6 +31,16 @@ async function run() {
     const classesCollection = client.db("fllDB").collection("classes");
     // APIs are started here
 
+    //get jwt
+    app.get("/jwt", (req, res) => {
+      const email = req.query.email;
+      console.log(email);
+      const token = jwt.sign({ email }, process.env.JWT_TOKEN_SECRET, {
+        expiresIn: "1h",
+      });
+      res.send({ token });
+    });
+
     //get classes with limit and sorts
     app.get("/classes-limit", async (req, res) => {
       const query = {};
