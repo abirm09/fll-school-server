@@ -24,11 +24,13 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    client.connect();
 
     // collections
+
     const classesCollection = client.db("fllDB").collection("classes");
     // APIs are started here
+
     //get classes with limit and sorts
     app.get("/classes-limit", async (req, res) => {
       const query = {};
@@ -41,6 +43,8 @@ async function run() {
         .toArray();
       res.send(result);
     });
+
+    //get all classes data
     app.get("/classes-all", async (req, res) => {
       const result = await classesCollection.find().toArray();
       res.send(result);
