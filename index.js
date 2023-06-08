@@ -29,8 +29,14 @@ async function run() {
     // collections
 
     const classesCollection = client.db("fllDB").collection("classes");
+    const usersCollection = client.db("fllDB").collection("users");
     // APIs are started here
 
+    // save user
+    app.post("/add-user", async (req, res) => {
+      const body = req.body;
+      console.log(body);
+    });
     //get jwt
     app.get("/jwt", (req, res) => {
       const email = req.query.email;
@@ -41,6 +47,12 @@ async function run() {
       res.send({ token });
     });
 
+    //get instructors
+    app.get("/instructor", async (req, res) => {
+      const query = { role: "instructor" };
+      const result = await usersCollection.find(query).toArray();
+      res.send(result);
+    });
     //get classes with limit and sorts
     app.get("/classes-limit", async (req, res) => {
       const query = {};
