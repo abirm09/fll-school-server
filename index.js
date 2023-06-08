@@ -48,8 +48,21 @@ async function run() {
 
     const classesCollection = client.db("fllDB").collection("classes");
     const usersCollection = client.db("fllDB").collection("users");
+    const selectedCollection = client.db("fllDB").collection("select");
     // APIs are started here
 
+    // save user
+    app.patch("/add-user", async (req, res) => {
+      const body = req.body;
+      const isAlreadyMember = await usersCollection.findOne({
+        email: body.email,
+      });
+      if (isAlreadyMember) {
+        return res.send(["Already a member"]);
+      }
+      const result = await usersCollection.insertOne(body);
+      res.send(result);
+    });
     //get user role
     app.get("/role", verifyJWT, async (req, res) => {
       const email = req.query.email;
@@ -71,19 +84,6 @@ async function run() {
         }
       }
       res.send(userRole);
-    });
-
-    // save user
-    app.patch("/add-user", async (req, res) => {
-      const body = req.body;
-      const isAlreadyMember = await usersCollection.findOne({
-        email: body.email,
-      });
-      if (isAlreadyMember) {
-        return res.send(["Already a member"]);
-      }
-      const result = await usersCollection.insertOne(body);
-      res.send(result);
     });
     //get jwt
     app.get("/jwt", (req, res) => {
@@ -118,6 +118,16 @@ async function run() {
       const result = await classesCollection.find().toArray();
       res.send(result);
     });
+    //select course
+    app.post("/select-item", verifyJWT, async (req, res) => {
+      const body = req.body;
+      if (req.decoded.email != body.studentEmail) {
+        return res.send({ error: true, message: "Un authorized user." });
+      }
+      const result = await selectedCollection.insertOne(body);
+      res.send(result);
+    });
+
     // APIs are ends here
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
