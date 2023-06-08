@@ -53,12 +53,24 @@ async function run() {
     //get user role
     app.get("/role", verifyJWT, async (req, res) => {
       const email = req.query.email;
+      if (!email) {
+        return res.send([""]);
+      }
       const query = { email: email };
       const options = {
         projection: { _id: 0, role: 1 },
       };
       const result = await usersCollection.findOne(query, options);
-      res.send(result);
+      let userRole = "user";
+      // console.log(result);
+      if (result) {
+        if (result.role === "instructor") {
+          userRole = "instructor";
+        } else if (result.role === "admin") {
+          userRole = "admin";
+        }
+      }
+      res.send(userRole);
     });
 
     // save user
@@ -76,7 +88,6 @@ async function run() {
     //get jwt
     app.get("/jwt", (req, res) => {
       const email = req.query.email;
-      console.log(email);
       const token = jwt.sign({ email }, process.env.JWT_TOKEN_SECRET, {
         expiresIn: "1h",
       });
