@@ -33,9 +33,17 @@ async function run() {
     // APIs are started here
 
     // save user
-    app.post("/add-user", async (req, res) => {
+    app.patch("/add-user", async (req, res) => {
       const body = req.body;
       console.log(body);
+      const isAlreadyMember = await usersCollection.findOne({
+        email: body.email,
+      });
+      if (isAlreadyMember) {
+        return res.send(["Already a member"]);
+      }
+      const result = await usersCollection.insertOne(body);
+      res.send(result);
     });
     //get jwt
     app.get("/jwt", (req, res) => {
