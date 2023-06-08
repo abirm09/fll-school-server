@@ -25,14 +25,12 @@ const client = new MongoClient(uri, {
 const verifyJWT = (req, res, next) => {
   const authorization = req.headers.authorization;
   if (!authorization) {
-    return res
-      .status(401)
-      .send([{ error: true, message: "Un authorize user." }]);
+    return res.status(401).send({ error: true, message: "Un authorize user." });
   }
   const token = authorization.split(" ")[1];
   jwt.verify(token, process.env.JWT_TOKEN_SECRET, (err, decoded) => {
     if (err) {
-      return res.status(403).send([{ error: true, message: "Access denied" }]);
+      return res.status(403).send({ error: true, message: "Access denied" });
     }
     req.decoded = decoded;
     next();
@@ -66,6 +64,7 @@ async function run() {
     //get user role
     app.get("/role", verifyJWT, async (req, res) => {
       const email = req.query.email;
+      console.log(email);
       if (!email) {
         return res.send([""]);
       }
