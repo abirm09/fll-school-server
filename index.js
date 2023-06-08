@@ -21,6 +21,24 @@ const client = new MongoClient(uri, {
   },
 });
 
+//verify jwt
+const verifyJWT = (req, res, next) => {
+  const authorization = req.headers.authorization;
+  if (!authorization) {
+    return res
+      .status(401)
+      .send([{ error: true, message: "Un authorize user." }]);
+  }
+  const token = authorization.split(" ")[1];
+  jwt.verify(token, process.env.JWT_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(403).send([{ error: true, message: "Access denied" }]);
+    }
+    req.decoded = decoded;
+    next();
+  });
+};
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -32,10 +50,20 @@ async function run() {
     const usersCollection = client.db("fllDB").collection("users");
     // APIs are started here
 
+    //get user role
+    app.get("/role", verifyJWT, async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email };
+      const options = {
+        projection: { _id: 0, role: 1 },
+      };
+      const result = await usersCollection.findOne(query, options);
+      res.send(result);
+    });
+
     // save user
     app.patch("/add-user", async (req, res) => {
       const body = req.body;
-      console.log(body);
       const isAlreadyMember = await usersCollection.findOne({
         email: body.email,
       });
