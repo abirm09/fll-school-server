@@ -47,6 +47,7 @@ async function run() {
     const classesCollection = client.db("fllDB").collection("classes");
     const usersCollection = client.db("fllDB").collection("users");
     const selectedCollection = client.db("fllDB").collection("select");
+    const enrolledCollection = client.db("fllDB").collection("enrolled");
     // APIs are started here
 
     // save user
@@ -116,11 +117,22 @@ async function run() {
       const result = await classesCollection.find().toArray();
       res.send(result);
     });
+
     //select course
     app.post("/select-item", verifyJWT, async (req, res) => {
       const body = req.body;
       if (req.decoded.email != body.studentEmail) {
         return res.send({ error: true, message: "Un authorized user." });
+      }
+      const getEnrolledItems = await enrolledCollection
+        .find({
+          email: body.studentEmail,
+        })
+        .toArray();
+      for (const item of getEnrolledItems) {
+        if (item.classId === body.classId) {
+          return res.send({ status: false, message: "Already enrolled" });
+        }
       }
       const result = await selectedCollection.insertOne(body);
       res.send(result);
@@ -161,7 +173,57 @@ async function run() {
       });
       res.send({ clientSecret: paymentIntent.client_secret });
     });
-
+    //get item by id
+    app.get("/selected-item", async (req, res) => {
+      const id = req.query.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await selectedCollection.findOne(query);
+      res.send(result);
+    });
+    //update count on classes and add to enrolled classes
+    app.post("/enrolled-classes", verifyJWT, async (req, res) => {
+      const body = req.body;
+      body.time = new Date();
+      const selectedId = body.id;
+      const deleteFromSelectItem = await selectedCollection.deleteOne({
+        _id: new ObjectId(selectedId),
+      });
+      delete body.id;
+      const query = { _id: new ObjectId(body.classId) };
+      const option = {
+        projection: { _id: 0, totalSeats: 1, bookedSeats: 1 },
+      };
+      const getPreviousData = await classesCollection.findOne(query, option);
+      console.log([
+        getPreviousData,
+        getPreviousData.totalSeats - getPreviousData.bookedSeats,
+      ]);
+      const calculation =
+        getPreviousData.totalSeats - getPreviousData.bookedSeats;
+      if (calculation > 0 && calculation <= getPreviousData.totalSeats) {
+        console.log("from the condition");
+        const updatedBookedCount = getPreviousData.bookedSeats + 1;
+        const updateDoc = {
+          $set: {
+            bookedSeats: updatedBookedCount,
+          },
+        };
+        const updateBookedCount = await classesCollection.updateOne(
+          query,
+          updateDoc
+        );
+        const result = await enrolledCollection.insertOne(body);
+        res.send({ result, updateBookedCount });
+      }
+    });
+    //get enrolled classes
+    app.get("/enrolled-classes", async (req, res) => {
+      const email = req.query.email;
+      const result = await enrolledCollection
+        .find({ email }, { sort: { time: -1 } })
+        .toArray();
+      res.send(result);
+    });
     // APIs are ends here
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
