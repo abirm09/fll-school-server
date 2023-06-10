@@ -74,7 +74,6 @@ async function run() {
       };
       const result = await usersCollection.findOne(query, options);
       let userRole = "user";
-      // console.log(result);
       if (result) {
         if (result.role === "instructor") {
           userRole = "instructor";
@@ -180,6 +179,17 @@ async function run() {
       const result = await selectedCollection.findOne(query);
       res.send(result);
     });
+    // check if seat is available or not
+    app.get("/class-available-or-not", async (req, res) => {
+      const id = req.query.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await classesCollection.findOne(query);
+      const calculation = result.totalSeats - result.bookedSeats;
+      if (calculation > 0 && calculation <= result.totalSeats) {
+        return res.send({ status: true, message: "Class is available." });
+      }
+      return res.send({ status: false, message: "Class is not available." });
+    });
     //update count on classes and add to enrolled classes
     app.post("/enrolled-classes", verifyJWT, async (req, res) => {
       const body = req.body;
@@ -194,14 +204,9 @@ async function run() {
         projection: { _id: 0, totalSeats: 1, bookedSeats: 1 },
       };
       const getPreviousData = await classesCollection.findOne(query, option);
-      console.log([
-        getPreviousData,
-        getPreviousData.totalSeats - getPreviousData.bookedSeats,
-      ]);
       const calculation =
         getPreviousData.totalSeats - getPreviousData.bookedSeats;
       if (calculation > 0 && calculation <= getPreviousData.totalSeats) {
-        console.log("from the condition");
         const updatedBookedCount = getPreviousData.bookedSeats + 1;
         const updateDoc = {
           $set: {
