@@ -67,6 +67,16 @@ async function run() {
       }
       next();
     };
+    //verify admin
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email };
+      const result = await usersCollection.findOne(query);
+      if (result.role !== "admin") {
+        return res.status(403).send({ error: true, message: "Access denied" });
+      }
+      next();
+    };
     // save user
     app.patch("/add-user", async (req, res) => {
       const body = req.body;
@@ -123,6 +133,11 @@ async function run() {
     //get all classes data
     app.get("/classes-all", async (req, res) => {
       const result = await classesCollection.find().toArray();
+      res.send(result);
+    });
+    app.get("/classes-all-approved", async (req, res) => {
+      const query = { status: "approved" };
+      const result = await classesCollection.find(query).toArray();
       res.send(result);
     });
 
@@ -264,12 +279,32 @@ async function run() {
     });
     //admin
     //approve a post
-    app.post("/approve-a-class", async (req, res) => {
+    app.post("/approve-a-class", verifyJWT, verifyAdmin, async (req, res) => {
       const id = req.query.id;
       const query = { _id: new ObjectId(id) };
-      console.log(id);
       const option = { $set: { status: "approved" } };
       const result = await classesCollection.updateOne(query, option);
+      res.send(result);
+    });
+    //deny a post
+    app.post("/deny-a-post", async (req, res) => {
+      const id = req.query.id;
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = { $set: { status: "deny" } };
+      const result = await classesCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
+    //send feedback for a post
+    app.post("/post-feedback", verifyJWT, verifyAdmin, async (req, res) => {
+      const { feedback, id } = req.body;
+      const query = { _id: new ObjectId(id) };
+      const updateDoc = { $set: { feedback } };
+      const options = { upsert: true };
+      const result = await classesCollection.updateOne(
+        query,
+        updateDoc,
+        options
+      );
       res.send(result);
     });
     // APIs are ends here
