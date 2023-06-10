@@ -49,7 +49,24 @@ async function run() {
     const selectedCollection = client.db("fllDB").collection("select");
     const enrolledCollection = client.db("fllDB").collection("enrolled");
     // APIs are started here
-
+    //get jwt
+    app.get("/jwt", (req, res) => {
+      const email = req.query.email;
+      const token = jwt.sign({ email }, process.env.JWT_TOKEN_SECRET, {
+        expiresIn: "1h",
+      });
+      res.send({ token });
+    });
+    //middleware
+    const verifyInstructor = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email };
+      const result = await usersCollection.findOne(query);
+      if (result.role !== "instructor") {
+        return res.status(403).send({ error: true, message: "Access denied" });
+      }
+      next();
+    };
     // save user
     app.patch("/add-user", async (req, res) => {
       const body = req.body;
@@ -82,14 +99,6 @@ async function run() {
         }
       }
       res.send(userRole);
-    });
-    //get jwt
-    app.get("/jwt", (req, res) => {
-      const email = req.query.email;
-      const token = jwt.sign({ email }, process.env.JWT_TOKEN_SECRET, {
-        expiresIn: "1h",
-      });
-      res.send({ token });
     });
 
     //get instructors
@@ -227,6 +236,30 @@ async function run() {
       const result = await enrolledCollection
         .find({ email }, { sort: { time: -1 } })
         .toArray();
+      res.send(result);
+    });
+
+    //instructor
+    // -------------------------
+    //add new class
+    app.post(
+      "/add-new-class",
+      verifyJWT,
+      verifyInstructor,
+      async (req, res) => {
+        const body = req.body;
+        body.bookedSeats = 0;
+        body.status = "pending";
+        console.log(body);
+        const result = await classesCollection.insertOne(body);
+        res.send(result);
+      }
+    );
+    //get classes that a instructor have added
+    app.get("/added-classes", verifyJWT, verifyInstructor, async (req, res) => {
+      const email = req.decoded.email;
+      const query = { instructorEmail: email };
+      const result = await classesCollection.find(query).toArray();
       res.send(result);
     });
     // APIs are ends here
