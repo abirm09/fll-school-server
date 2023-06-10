@@ -262,6 +262,16 @@ async function run() {
       const result = await classesCollection.find(query).toArray();
       res.send(result);
     });
+    //admin
+    //approve a post
+    app.post("/approve-a-class", async (req, res) => {
+      const id = req.query.id;
+      const query = { _id: new ObjectId(id) };
+      console.log(id);
+      const option = { $set: { status: "approved" } };
+      const result = await classesCollection.updateOne(query, option);
+      res.send(result);
+    });
     // APIs are ends here
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
