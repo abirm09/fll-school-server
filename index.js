@@ -131,7 +131,7 @@ async function run() {
     });
 
     //get all classes data
-    app.get("/classes-all", async (req, res) => {
+    app.get("/classes-all", verifyJWT, verifyAdmin, async (req, res) => {
       const result = await classesCollection.find().toArray();
       res.send(result);
     });
@@ -287,7 +287,7 @@ async function run() {
       res.send(result);
     });
     //deny a post
-    app.post("/deny-a-post", async (req, res) => {
+    app.post("/deny-a-post", verifyJWT, verifyAdmin, async (req, res) => {
       const id = req.query.id;
       const query = { _id: new ObjectId(id) };
       const updateDoc = { $set: { status: "deny" } };
@@ -305,6 +305,20 @@ async function run() {
         updateDoc,
         options
       );
+      res.send(result);
+    });
+    //get all users
+    app.get("/user-all", verifyJWT, verifyAdmin, async (req, res) => {
+      const result = await usersCollection.find().toArray();
+      res.send(result);
+    });
+    //make admin
+    app.post("/change-user-role", verifyJWT, verifyAdmin, async (req, res) => {
+      const id = req.query.id;
+      const role = req.query.role;
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = { $set: { role: role } };
+      const result = await usersCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
     // APIs are ends here
